@@ -181,7 +181,7 @@ const ChatInterface = () => {
         };
         console.log('YT Chatbot - Video URL:', urlToUse, '| Question:', userMessage);
         
-        response = await fetch('https://ytchatbot-2.onrender.com/ytchatbot', {
+        response = await fetch('https://ytchatbot-3.onrender.com/ytchatbot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
