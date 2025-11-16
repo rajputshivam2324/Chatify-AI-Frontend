@@ -258,25 +258,38 @@ const ChatInterface = () => {
           
           setMessages(prev => [...prev, assistantMessage]);
         } else {
-          // Try to parse JSON error response
+          // Handle error response from backend
           let errorMessage = `Request failed with status ${response.status}`;
+          
           try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
+            // Read response as text first, then try to parse as JSON
+            const responseText = await response.text();
+            console.log('Error response text:', responseText);
+            
+            try {
+              const errorData = JSON.parse(responseText);
+              // Backend returns { error: "message" } for HttpError
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            } catch (parseError) {
+              // If not JSON, use the text as error message
+              errorMessage = responseText || errorMessage;
+            }
             
             // Provide more helpful error messages
             if (errorMessage.includes('Could not fetch transcript')) {
               errorMessage = 'Could not fetch transcript. Please check if the video has captions enabled. Some videos may not have captions available.';
             }
           } catch (e) {
-            // If not JSON, try text
-            try {
-              const errorText = await response.text();
-              errorMessage = errorText || errorMessage;
-            } catch (e2) {
-              // Keep default error message
-            }
+            console.error('Failed to read error response:', e);
+            // Keep default error message
           }
+          
+          console.error('YT Chatbot error:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorMessage
+          });
+          
           throw new Error(errorMessage);
         }
       } else if (selectedModel === 'image') {
