@@ -18,6 +18,7 @@ const ChatInterface = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [videoUrl, setVideoUrl] = useState('');
+  const [currentVideoUrl, setCurrentVideoUrl] = useState(''); // Track the video URL being used for current session
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -75,6 +76,7 @@ const ChatInterface = () => {
     setInputText('');
     setSelectedFile(null);
     setVideoUrl('');
+    setCurrentVideoUrl(''); // Clear current video URL when model changes
     
     // Generate new session ID for the new model
     setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
@@ -123,10 +125,23 @@ const ChatInterface = () => {
     e.preventDefault();
     if (!inputText.trim() && !selectedFile) return;
     
-    // For ytchatbot, require video URL
-    if (selectedModel === 'ytchatbot' && !videoUrl.trim()) {
-      alert('Please enter a YouTube video URL');
-      return;
+    // For ytchatbot, require video URL on first question or if video URL changed
+    if (selectedModel === 'ytchatbot') {
+      // Determine which video URL to use
+      const urlToUse = videoUrl.trim() || currentVideoUrl;
+      
+      // If no video URL is set yet (first question), require it
+      if (!urlToUse) {
+        alert('Please enter a YouTube video URL');
+        return;
+      }
+      
+      // If video URL is provided and different from current, update it and clear messages
+      if (videoUrl.trim() && videoUrl.trim() !== currentVideoUrl) {
+        setCurrentVideoUrl(videoUrl.trim());
+        // Clear messages when video URL changes to start fresh conversation
+        setMessages([]);
+      }
     }
 
     // For Chrono-Edit, require image
@@ -158,8 +173,10 @@ const ChatInterface = () => {
       
       if (selectedModel === 'ytchatbot') {
         // Handle ytchatbot requests to backend2
+        // Use currentVideoUrl if available, otherwise use videoUrl (for first question)
+        const urlToUse = currentVideoUrl || videoUrl.trim();
         const requestBody = {
-          videoUrl: videoUrl.trim(),
+          videoUrl: urlToUse,
           question: userMessage
         };
         console.log('YT Chatbot request body:', requestBody);
@@ -187,6 +204,9 @@ const ChatInterface = () => {
               replyText = data.message;
             } else if (data.answer) {
               replyText = data.answer;
+            } else if (data.error) {
+              // Handle error response from backend
+              throw new Error(data.message || data.error);
             } else {
               replyText = JSON.stringify(data);
             }
@@ -203,8 +223,21 @@ const ChatInterface = () => {
           
           setMessages(prev => [...prev, assistantMessage]);
         } else {
-          const errorText = await response.text();
-          throw new Error(`YT Chatbot request failed: ${response.status} - ${errorText}`);
+          // Try to parse JSON error response
+          let errorMessage = `Request failed with status ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (e) {
+            // If not JSON, try text
+            try {
+              const errorText = await response.text();
+              errorMessage = errorText || errorMessage;
+            } catch (e2) {
+              // Keep default error message
+            }
+          }
+          throw new Error(errorMessage);
         }
       } else if (selectedModel === 'image') {
         // Handle image generation
@@ -383,6 +416,7 @@ const ChatInterface = () => {
     setInputText('');
     setSelectedFile(null);
     setVideoUrl('');
+    setCurrentVideoUrl(''); // Clear current video URL when starting new chat
     setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
