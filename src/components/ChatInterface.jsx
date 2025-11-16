@@ -179,7 +179,14 @@ const ChatInterface = () => {
           videoUrl: urlToUse,
           question: userMessage
         };
-        console.log('YT Chatbot request body:', requestBody);
+        console.log('========================================');
+        console.log('YT Chatbot Request:');
+        console.log('Current Video URL (stored):', currentVideoUrl);
+        console.log('Input Video URL (from field):', videoUrl);
+        console.log('URL being used:', urlToUse);
+        console.log('Question:', userMessage);
+        console.log('Request body:', requestBody);
+        console.log('========================================');
         
         response = await fetch('https://ytchatbot-2.onrender.com/ytchatbot', {
           method: 'POST',
