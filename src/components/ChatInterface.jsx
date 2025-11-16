@@ -37,7 +37,7 @@ const ChatInterface = () => {
       if (selectedModel === 'image' || selectedModel === 'Chrono-Edit') return;
       
       try {
-        const response = await fetch(`http://localhost:4001/model/${selectedModel}/${sessionId}`);
+        const response = await fetch(`https://chatify-ai-backend1.onrender.com/model/${selectedModel}/${sessionId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.conversationHistory && data.conversationHistory.length > 0) {
