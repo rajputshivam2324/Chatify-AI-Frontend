@@ -164,7 +164,7 @@ const ChatInterface = () => {
         };
         console.log('YT Chatbot request body:', requestBody);
         
-        response = await fetch('http://localhost:3005/ytchatbot', {
+        response = await fetch('https://ytchatbot-2.onrender.com', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
