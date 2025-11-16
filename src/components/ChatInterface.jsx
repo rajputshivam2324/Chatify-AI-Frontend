@@ -2,6 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:4001'
+    : 'https://chatify-ai-backend1.onrender.com');
+
+const getModelEndpoint = (path) => `${API_BASE_URL}${path}`;
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -37,7 +45,7 @@ const ChatInterface = () => {
       if (selectedModel === 'image' || selectedModel === 'Chrono-Edit') return;
       
       try {
-        const response = await fetch(`https://chatify-ai-backend1.onrender.com/model/${selectedModel}/${sessionId}`);
+        const response = await fetch(`${API_BASE_URL}/model/${selectedModel}/${sessionId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.conversationHistory && data.conversationHistory.length > 0) {
@@ -203,7 +211,7 @@ const ChatInterface = () => {
         const requestBody = { prompt: userMessage };
         console.log('Image request body:', requestBody);
         
-        response = await fetch(`http://localhost:4001${selectedModelConfig.endpoint}`, {
+        response = await fetch(getModelEndpoint(selectedModelConfig.endpoint), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -247,7 +255,7 @@ const ChatInterface = () => {
           imageData: '[IMAGE_DATA]'
         });
         
-        response = await fetch(`http://localhost:4001${selectedModelConfig.endpoint}`, {
+        response = await fetch(getModelEndpoint(selectedModelConfig.endpoint), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -306,7 +314,7 @@ const ChatInterface = () => {
           imageUrl: requestBody.imageUrl ? '[IMAGE_DATA]' : undefined
         });
 
-        response = await fetch(`http://localhost:4001${selectedModelConfig.endpoint}`, {
+        response = await fetch(getModelEndpoint(selectedModelConfig.endpoint), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
