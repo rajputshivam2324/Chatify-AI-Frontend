@@ -19,6 +19,7 @@ const ChatInterface = () => {
   const [sessionId, setSessionId] = useState(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [videoUrl, setVideoUrl] = useState('');
   const [currentVideoUrl, setCurrentVideoUrl] = useState(''); // Track the video URL being used for current session
+  const [transcriptId, setTranscriptId] = useState(''); // Store transcriptId for the current video
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -77,6 +78,7 @@ const ChatInterface = () => {
     setSelectedFile(null);
     setVideoUrl('');
     setCurrentVideoUrl(''); // Clear current video URL when model changes
+    setTranscriptId(''); // Clear transcriptId when model changes
     
     // Generate new session ID for the new model
     setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
@@ -121,6 +123,20 @@ const ChatInterface = () => {
     });
   };
 
+  // Validate YouTube URL format
+  const isValidYouTubeUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) return false;
+    
+    const patterns = [
+      /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[\w-]+/,
+      /^https?:\/\/youtube\.com\/watch\?.*v=[\w-]+/
+    ];
+    
+    return patterns.some(pattern => pattern.test(trimmedUrl));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!inputText.trim() && !selectedFile) return;
@@ -136,9 +152,16 @@ const ChatInterface = () => {
         return;
       }
       
+      // Validate YouTube URL format
+      if (!isValidYouTubeUrl(urlToUse)) {
+        alert('Please enter a valid YouTube URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID)');
+        return;
+      }
+      
       // If video URL is provided and different from current, update it and clear messages
       if (videoUrl.trim() && videoUrl.trim() !== currentVideoUrl) {
         setCurrentVideoUrl(videoUrl.trim());
+        setTranscriptId(''); // Clear transcriptId when video URL changes
         // Clear messages when video URL changes to start fresh conversation
         setMessages([]);
       }
@@ -179,7 +202,13 @@ const ChatInterface = () => {
           videoUrl: urlToUse,
           question: userMessage
         };
-        console.log('YT Chatbot - Video URL:', urlToUse, '| Question:', userMessage);
+        
+        // Include transcriptId if we have one (for subsequent requests to the same video)
+        if (transcriptId) {
+          requestBody.transcriptId = transcriptId;
+        }
+        
+        console.log('YT Chatbot - Video URL:', urlToUse, '| Question:', userMessage, '| TranscriptId:', transcriptId || 'none');
         
         response = await fetch('https://ytchatbot-3.onrender.com/ytchatbot', {
           method: 'POST',
@@ -194,6 +223,12 @@ const ChatInterface = () => {
         if (response.ok) {
           const data = await response.json();
           console.log('YT Chatbot response data:', data);
+          
+          // Store transcriptId if returned (for subsequent requests)
+          if (data.transcriptId) {
+            setTranscriptId(data.transcriptId);
+            console.log('Stored transcriptId:', data.transcriptId);
+          }
           
           // Backend2 returns the answer directly as a string
           let replyText = '';
@@ -228,6 +263,11 @@ const ChatInterface = () => {
           try {
             const errorData = await response.json();
             errorMessage = errorData.message || errorData.error || errorMessage;
+            
+            // Provide more helpful error messages
+            if (errorMessage.includes('Could not fetch transcript')) {
+              errorMessage = 'Could not fetch transcript. Please check if the video has captions enabled. Some videos may not have captions available.';
+            }
           } catch (e) {
             // If not JSON, try text
             try {
@@ -417,6 +457,7 @@ const ChatInterface = () => {
     setSelectedFile(null);
     setVideoUrl('');
     setCurrentVideoUrl(''); // Clear current video URL when starting new chat
+    setTranscriptId(''); // Clear transcriptId when starting new chat
     setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
